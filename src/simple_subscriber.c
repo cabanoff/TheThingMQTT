@@ -46,7 +46,8 @@ void subscribe_callback(void** unused, struct mqtt_response_publish *published);
  *       \ref __mqtt_send every so often. I've picked 100 ms meaning that
  *       client ingress/egress traffic will be handled every 100 ms.
  */
-void* client_refresher(void* client);
+void* publish_client_refresher(void* client);
+void* subscribe_client_refresher(void* client);
 
 /**
  * @brief Safelty closes the \p sockfd and cancels the \p client_daemon before \c exit.
@@ -136,13 +137,13 @@ int main(int argc, const char *argv[])
 
     /* start a thread to refresh the subscriber client (handle egress and ingree client traffic) */
     pthread_t client_daemonIn;
-    if(pthread_create(&client_daemonIn, NULL, client_refresher, &clientIn)) {
+    if(pthread_create(&client_daemonIn, NULL, subscribe_client_refresher, &clientIn)) {
         fprintf(stderr, "Failed to start subscriber client daemon.\n");
         exit_example(EXIT_FAILURE, sockfdIn, sockfdOut,NULL, NULL);
     }
      /* start a thread to refresh the publisher client (handle egress and ingree client traffic) */
     pthread_t client_daemonOut;
-    if(pthread_create(&client_daemonOut, NULL, client_refresher, &clientOut)) {
+    if(pthread_create(&client_daemonOut, NULL, publish_client_refresher, &clientOut)) {
         fprintf(stderr, "Failed to start publisher client daemon.\n");
         exit_example(EXIT_FAILURE, sockfdIn, sockfdOut,NULL, NULL);
     }
@@ -229,7 +230,20 @@ void subscribe_callback(void** unused, struct mqtt_response_publish *published)
     free(topic_name);
 }
 
-void* client_refresher(void* client)
+void* publish_client_refresher(void* client)
+{
+    enum MQTTErrors error;
+    while(1)
+    {
+        error = mqtt_sync((struct mqtt_client*) client);
+        if( error != MQTT_OK){
+            fprintf(stderr, "publisher error: %s\n", mqtt_error_str(error));
+        }
+        usleep(100000U);
+    }
+    return NULL;
+}
+void* subscribe_client_refresher(void* client)
 {
     while(1)
     {
@@ -238,5 +252,4 @@ void* client_refresher(void* client)
     }
     return NULL;
 }
-
 

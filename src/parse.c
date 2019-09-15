@@ -167,13 +167,13 @@ void formJsonStrings(sensorMess_t*);
 
 void formJsonStrings(sensorMess_t* sensorMess)
 {
-    snprintf(sensorMess->jsonStr[0],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Act1\",\"value\":%d,\"datatime\":\"%s\"}]",
+    snprintf(sensorMess->jsonStr[0],MAX_JSON_SIZE,"\"values:\"[{\"key\":\"Dev%d_Act1\",\"value\":%d,\"datatime\":\"%s\"}]",
                                             sensorMess->deviceID, sensorMess->activity1, sensorMess->time);
-    snprintf(sensorMess->jsonStr[1],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rum1\",\"value\":%d,\"datatime\":\"%s\"}]",
+    snprintf(sensorMess->jsonStr[1],MAX_JSON_SIZE,"\"values:\"[{\"key\":\"Dev%d_Rum1\",\"value\":%d,\"datatime\":\"%s\"}]",
                                             sensorMess->deviceID, sensorMess->rumination1, sensorMess->time);
-    snprintf(sensorMess->jsonStr[2],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Chew1\",\"value\":%d,\"datatime\":\"%s\"}]",
+    snprintf(sensorMess->jsonStr[2],MAX_JSON_SIZE,"\"values:\"[{\"key\":\"Dev%d_Chew1\",\"value\":%d,\"datatime\":\"%s\"}]",
                                             sensorMess->deviceID, sensorMess->chewing1, sensorMess->time);
-    snprintf(sensorMess->jsonStr[3],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rest1\",\"value\":%d,\"datatime\":\"%s\"}]",
+    snprintf(sensorMess->jsonStr[3],MAX_JSON_SIZE,"\"values:\"[{\"key\":\"Dev%d_Rest1\",\"value\":%d,\"datatime\":\"%s\"}]",
                                             sensorMess->deviceID, sensorMess->rest1, sensorMess->time);
     sensorMess->counter = 4; // 4 messages to send;
 }
