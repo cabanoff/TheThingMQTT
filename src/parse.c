@@ -155,6 +155,7 @@ void formJsonStrings(sensorMess_t*);
 /**
  * @brief definition of json strings.
  *        index must not be more than X (char jsonStr[X][MAX_JSON_SIZE];)
+ * json string example: [{"key":"MartaRum","value":0,"datetime":"20190915193200"}]
  *
  *
  *
@@ -166,9 +167,13 @@ void formJsonStrings(sensorMess_t*);
 
 void formJsonStrings(sensorMess_t* sensorMess)
 {
-    snprintf(sensorMess->jsonStr[0],MAX_JSON_SIZE,"Dev%d_Act1 = %d time = %s",sensorMess->deviceID, sensorMess->activity1, sensorMess->time);
-    snprintf(sensorMess->jsonStr[1],MAX_JSON_SIZE,"Dev%d_Rum1 = %d time = %s",sensorMess->deviceID, sensorMess->rumination1, sensorMess->time);
-    snprintf(sensorMess->jsonStr[2],MAX_JSON_SIZE,"Dev%d_Chew1 = %d time = %s",sensorMess->deviceID, sensorMess->chewing1, sensorMess->time);
-    snprintf(sensorMess->jsonStr[3],MAX_JSON_SIZE,"Dev%d_Rest1 = %d time = %s",sensorMess->deviceID, sensorMess->rest1, sensorMess->time);
+    snprintf(sensorMess->jsonStr[0],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Act1\",\"value\":%d,\"datatime\":\"%s\"}]",
+                                            sensorMess->deviceID, sensorMess->activity1, sensorMess->time);
+    snprintf(sensorMess->jsonStr[1],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rum1\",\"value\":%d,\"datatime\":\"%s\"}]",
+                                            sensorMess->deviceID, sensorMess->rumination1, sensorMess->time);
+    snprintf(sensorMess->jsonStr[2],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Chew1\",\"value\":%d,\"datatime\":\"%s\"}]",
+                                            sensorMess->deviceID, sensorMess->chewing1, sensorMess->time);
+    snprintf(sensorMess->jsonStr[3],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rest1\",\"value\":%d,\"datatime\":\"%s\"}]",
+                                            sensorMess->deviceID, sensorMess->rest1, sensorMess->time);
     sensorMess->counter = 4; // 4 messages to send;
 }
