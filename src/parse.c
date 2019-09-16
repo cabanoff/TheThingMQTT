@@ -151,6 +151,7 @@ void formJsonStrings(sensorMess_t*);
         break;
         case '2':
         rest = 0;rumination = 1; chewing = 0;
+        break;
         default:
         rest = 0; rumination = 0; chewing = 0;
     }
