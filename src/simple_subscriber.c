@@ -20,12 +20,30 @@
 
 /* --- PRIVATE VARIABLES (GLOBAL) ------------------------------------------- */
 
+typedef enum MQTTErrors MQTTErrors_t;
+
 /**
  * signal handling variables
  */
 struct sigaction sigact; /* SIGQUIT&SIGINT&SIGTERM signal handling */
 int exit_sig; /* 1 -> application terminates cleanly (shut down hardware, close open files, etc) */
 int quit_sig; /* 1 -> application terminates without shutting down the hardware */
+
+
+struct mqtt_client clientIn, clientOut;
+uint8_t sendbufIn[2048]; /* sendbuf should be large enough to hold multiple whole mqtt messages */
+uint8_t recvbufIn[1024]; /* recvbuf should be large enough any whole mqtt message expected to be received */
+uint8_t sendbufOut[2048]; /* sendbuf should be large enough to hold multiple whole mqtt messages */
+uint8_t recvbufOut[1024]; /* recvbuf should be large enough any whole mqtt message expected to be received */
+int sockfdIn;
+int sockfdOut;
+const char* addrIn;
+const char* addrOut;
+const char* port;
+const char* topicIn;
+const char* topicOut;
+pthread_t client_daemonOut;
+pthread_t client_daemonIn;
 
 /* --- PRIVATE FUNCTIONS DECLARATION ---------------------------------------- */
 
@@ -48,7 +66,7 @@ void subscribe_callback(void** unused, struct mqtt_response_publish *published);
  */
 void* publish_client_refresher(void* client);
 void* subscribe_client_refresher(void* client);
-
+int makePublisher(void);
 /**
  * @brief Safelty closes the \p sockfd and cancels the \p client_daemon before \c exit.
  */
@@ -56,11 +74,8 @@ void exit_example(int status, int sockfdIn, int sockfdOut, pthread_t *client_dae
 
 int main(int argc, const char *argv[])
 {
-    const char* addrIn;
-    const char* addrOut;
-    const char* port;
-    const char* topicIn;
-    const char* topicOut;
+
+
     exit_sig = 0;
     quit_sig = 0;
 
@@ -103,20 +118,12 @@ int main(int argc, const char *argv[])
 
 
     /* open the non-blocking TCP socket (connecting to the broker) */
-    int sockfdIn = open_nb_socket(addrIn, port);
-    int sockfdOut = open_nb_socket(addrOut, port);
+    sockfdIn = open_nb_socket(addrIn, port);
 
-    if((sockfdIn == -1) ||(sockfdOut == -1)){
+    if(sockfdIn == -1){
         perror("Failed to open input socket: ");
         exit_example(EXIT_FAILURE, sockfdIn, sockfdOut, NULL, NULL);
     }
-
-    /* setup a client */
-    struct mqtt_client clientIn, clientOut;
-    uint8_t sendbufIn[2048]; /* sendbuf should be large enough to hold multiple whole mqtt messages */
-    uint8_t recvbufIn[1024]; /* recvbuf should be large enough any whole mqtt message expected to be received */
-    uint8_t sendbufOut[2048]; /* sendbuf should be large enough to hold multiple whole mqtt messages */
-    uint8_t recvbufOut[1024]; /* recvbuf should be large enough any whole mqtt message expected to be received */
 
     mqtt_init(&clientIn, sockfdIn, sendbufIn, sizeof(sendbufIn), recvbufIn, sizeof(recvbufIn), subscribe_callback);
     mqtt_connect(&clientIn, "subscribing_client", NULL, NULL, 0, NULL, NULL, 0, 400);
@@ -126,35 +133,18 @@ int main(int argc, const char *argv[])
         fprintf(stderr, "connect subscriber error: %s\n", mqtt_error_str(clientIn.error));
         exit_example(EXIT_FAILURE, sockfdIn,sockfdOut,NULL, NULL);
     }
-    mqtt_init(&clientOut, sockfdOut, sendbufOut, sizeof(sendbufOut), recvbufOut, sizeof(recvbufOut), publish_callback);
-    mqtt_connect(&clientOut, "publishing_client", NULL, NULL, 0, NULL, NULL, 0, 400);
-
-    /* check that we don't have any errors */
-    if (clientOut.error != MQTT_OK) {
-        fprintf(stderr, "connect publisher error: %s\n", mqtt_error_str(clientOut.error));
-        exit_example(EXIT_FAILURE, sockfdIn, sockfdOut,NULL,NULL);
-    }
 
     /* start a thread to refresh the subscriber client (handle egress and ingree client traffic) */
-    pthread_t client_daemonIn;
+
     if(pthread_create(&client_daemonIn, NULL, subscribe_client_refresher, &clientIn)) {
         fprintf(stderr, "Failed to start subscriber client daemon.\n");
-        exit_example(EXIT_FAILURE, sockfdIn, sockfdOut,NULL, NULL);
-    }
-     /* start a thread to refresh the publisher client (handle egress and ingree client traffic) */
-    pthread_t client_daemonOut;
-    if(pthread_create(&client_daemonOut, NULL, publish_client_refresher, &clientOut)) {
-        fprintf(stderr, "Failed to start publisher client daemon.\n");
         exit_example(EXIT_FAILURE, sockfdIn, sockfdOut,NULL, NULL);
     }
 
     /* subscribe */
     mqtt_subscribe(&clientIn, topicIn, 0);
 
-    /* start publishing */
     printf("%s listening for '%s' messages.\n", argv[0], topicIn);
-    printf("Press ENTER to publish the message.\n");
-    printf("Press CTRL-D (or any other key) to exit.\n\n");
 
     /* configure signal handling */
 	sigemptyset(&sigact.sa_mask);
@@ -169,19 +159,30 @@ int main(int argc, const char *argv[])
 
 
         char* messageToPublish = parse_get_mess();
+        int sent_ok = 0;
         if(messageToPublish != NULL)  //there is a mesasage to publish
         {
+            if(makePublisher() != -1){
+                printf("%s published : \"%s\"\n", argv[0], messageToPublish);
 
-            printf("%s published : \"%s\"\n", argv[0], messageToPublish);
+                 /* republish the message */
+                mqtt_publish(&clientOut, topicOut, messageToPublish, strlen(messageToPublish), MQTT_PUBLISH_QOS_0);
+                if (clientOut.error == MQTT_OK) {
+                    if(mqtt_sync(&clientOut) == MQTT_OK) sent_ok = 1;
 
-             /* republish the message */
-            mqtt_publish(&clientOut, topicOut, messageToPublish, strlen(messageToPublish), MQTT_PUBLISH_QOS_0);
+                }
 
-            /* check for errors */
-            if (clientOut.error != MQTT_OK) {
-                fprintf(stderr, "publisher error: %s\n", mqtt_error_str(clientOut.error));
-                exit_example(EXIT_FAILURE, sockfdIn, sockfdOut, &client_daemonIn, &client_daemonOut);
             }
+            if(sent_ok != 0){
+                parse_prepare_mess();
+                if (sockfdOut != -1) close(sockfdOut);  //close publisher
+            }
+
+            else{
+                fprintf(stderr, "publisher error: %s\n", mqtt_error_str(clientOut.error));
+                usleep(1000000U);
+            }
+
         }
 
     }
@@ -192,10 +193,43 @@ int main(int argc, const char *argv[])
     sleep(1);
 
     /* exit */
-    exit_example(EXIT_SUCCESS, sockfdIn, sockfdOut, &client_daemonIn, &client_daemonOut);
+    //exit_example(EXIT_SUCCESS, sockfdIn, sockfdOut, &client_daemonIn, &client_daemonOut);
+    exit_example(EXIT_SUCCESS, sockfdIn, sockfdOut, &client_daemonIn, NULL);
 }
 
 /* --- PRIVATE FUNCTIONS DEFINITION ----------------------------------------- */
+
+int makePublisher(void){
+
+    sockfdOut = open_nb_socket(addrOut, port);
+
+    if(sockfdOut == -1){
+        perror("Failed to open input socket: ");
+        //exit_example(EXIT_FAILURE, sockfdIn, sockfdOut, NULL, NULL);
+        return -1;
+    }
+    mqtt_init(&clientOut, sockfdOut, sendbufOut, sizeof(sendbufOut), recvbufOut, sizeof(recvbufOut), publish_callback);
+    mqtt_connect(&clientOut, "publishing_client", NULL, NULL, 0, NULL, NULL, 0, 400);
+
+    /* check that we don't have any errors */
+    if (clientOut.error != MQTT_OK) {
+        fprintf(stderr, "connect publisher error: %s\n", mqtt_error_str(clientOut.error));
+        //exit_example(EXIT_FAILURE, sockfdIn, sockfdOut,NULL,NULL);
+        if (sockfdOut != -1) close(sockfdOut);
+        return -1;
+
+    }
+    return 0;
+     /* start a thread to refresh the publisher client (handle egress and ingree client traffic) */
+//
+//    if(pthread_create(&client_daemonOut, NULL, publish_client_refresher, &clientOut)) {
+//        fprintf(stderr, "Failed to start publisher client daemon.\n");
+//        //exit_example(EXIT_FAILURE, sockfdIn, sockfdOut,NULL, NULL);
+//        if (sockfdOut != -1) close(sockfdOut);
+//        return;
+//    }
+
+}
 
 void sig_handler(int sigio) {
 	if (sigio == SIGQUIT) {
@@ -232,7 +266,7 @@ void subscribe_callback(void** unused, struct mqtt_response_publish *published)
 
 void* publish_client_refresher(void* client)
 {
-    enum MQTTErrors error;
+    MQTTErrors_t error;
     while(1)
     {
         error = mqtt_sync((struct mqtt_client*) client);

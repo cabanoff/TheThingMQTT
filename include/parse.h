@@ -22,7 +22,14 @@
  * @returns NULL if no mesages stored
  */
  char* parse_get_mess(void);
-
+/**
+ * @brief decriments counters, prepares next message to be sent
+ *
+ * @param[in] none
+ *
+ * @returns none
+ */
+ void parse_prepare_mess(void);
 
 #endif
 

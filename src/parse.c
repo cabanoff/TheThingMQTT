@@ -13,7 +13,7 @@
 
 #define DEBUG_PUBLISH "[{\"key\":\"MartaRum\",\"value\":1}]"
 #define MAX_JSON_SIZE 100
-#define MAX_MESSAGES 20
+#define MAX_MESSAGES 200
 #define CURRENT sensorMess[messCounter]
 
 /**
@@ -25,7 +25,6 @@
  * @returns none
  */
 typedef struct{
-    char jsonString[MAX_JSON_SIZE];
     char jsonStr[4][MAX_JSON_SIZE];    // 1 - activity1, 2 - Rum1, 3 - Chew1, 4 - Rest1
     uint32_t deviceID;
     uint8_t activity1;
@@ -39,6 +38,7 @@ typedef struct{
 size_t messageSize;
 sensorMess_t sensorMess[MAX_MESSAGES];           //reserv memory for 50 messages
 uint16_t messCounter = 0;
+//char* messToSend = NULL;
 
 /* --- PRIVATE FUNCTIONS DECLARATION ---------------------------------------- */
 int getDevInfo(char*,sensorMess_t*);
@@ -66,25 +66,40 @@ void formJsonStrings(sensorMess_t*);
 
 
 /**
- * @brief returns first message in stack.
+ * @brief returns prepared message
  *
  * @param[in] none
  *
- * @returns NULL if no mesages stored
+ * @returns message to be sent
  */
+  char* parse_get_mess(void)
+  {
+    if(messCounter){
+        return(sensorMess[messCounter - 1].jsonStr[sensorMess[messCounter - 1].counter-1]);
+    }else return NULL;
+  }
 
- char* parse_get_mess(void)
+/**
+ * @brief decriments counters, prepares next message to be sent
+ *
+ * @param[in] none
+ *
+ * @returns none
+ */
+ void parse_prepare_mess(void)
  {
     if(messCounter){
-        if(sensorMess[messCounter - 1].counter){
+        if(sensorMess[messCounter - 1].counter > 1){
             sensorMess[messCounter - 1].counter--;
-            return sensorMess[messCounter - 1].jsonStr[sensorMess[messCounter - 1].counter];
+            //messToSend =  sensorMess[messCounter - 1].jsonStr[sensorMess[messCounter - 1].counter];
+            return;
         }else{
             messCounter--;
             if(messCounter){
-                if(sensorMess[messCounter - 1].counter){
+                if(sensorMess[messCounter - 1].counter > 1){
                     sensorMess[messCounter - 1].counter--;
-                    return sensorMess[messCounter - 1].jsonStr[sensorMess[messCounter - 1].counter];
+                    //messToSend = sensorMess[messCounter - 1].jsonStr[sensorMess[messCounter - 1].counter];
+                    return;
                 }
             }
         }
@@ -92,7 +107,7 @@ void formJsonStrings(sensorMess_t*);
 
     }
 
-    return NULL;
+   // messToSend = NULL;
  }
 
  /* --- PRIVATE FUNCTIONS DEFINITION ----------------------------------------- */
@@ -167,13 +182,14 @@ void formJsonStrings(sensorMess_t*);
 
 void formJsonStrings(sensorMess_t* sensorMess)
 {
-    snprintf(sensorMess->jsonStr[0],MAX_JSON_SIZE,"\"values:\"[{\"key\":\"Dev%d_Act1\",\"value\":%d,\"datatime\":\"%s\"}]",
+    snprintf(sensorMess->jsonStr[0],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Act1\",\"value\":%d,\"datatime\":\"%s\"}]",
                                             sensorMess->deviceID, sensorMess->activity1, sensorMess->time);
-    snprintf(sensorMess->jsonStr[1],MAX_JSON_SIZE,"\"values:\"[{\"key\":\"Dev%d_Rum1\",\"value\":%d,\"datatime\":\"%s\"}]",
+    snprintf(sensorMess->jsonStr[1],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rum1\",\"value\":%d,\"datatime\":\"%s\"}]",
                                             sensorMess->deviceID, sensorMess->rumination1, sensorMess->time);
-    snprintf(sensorMess->jsonStr[2],MAX_JSON_SIZE,"\"values:\"[{\"key\":\"Dev%d_Chew1\",\"value\":%d,\"datatime\":\"%s\"}]",
+    snprintf(sensorMess->jsonStr[2],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Chew1\",\"value\":%d,\"datatime\":\"%s\"}]",
                                             sensorMess->deviceID, sensorMess->chewing1, sensorMess->time);
-    snprintf(sensorMess->jsonStr[3],MAX_JSON_SIZE,"\"values:\"[{\"key\":\"Dev%d_Rest1\",\"value\":%d,\"datatime\":\"%s\"}]",
+    snprintf(sensorMess->jsonStr[3],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rest1\",\"value\":%d,\"datatime\":\"%s\"}]",
                                             sensorMess->deviceID, sensorMess->rest1, sensorMess->time);
     sensorMess->counter = 4; // 4 messages to send;
+    //messToSend = sensorMess->jsonStr[3];
 }
