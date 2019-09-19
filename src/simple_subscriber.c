@@ -252,13 +252,18 @@ void publish_callback(void** unused, struct mqtt_response_publish *published)
 {
      /* not used in this example */
 }
+
+
 void subscribe_callback(void** unused, struct mqtt_response_publish *published)
 {
     /* note that published->topic_name is NOT null-terminated (here we'll change it to a c-string) */
     char* topic_name = (char*) malloc(published->topic_name_size + 1);
     memcpy(topic_name, published->topic_name, published->topic_name_size);
     topic_name[published->topic_name_size] = '\0';
-    parse_save((const char*) published->application_message,published->application_message_size);
+
+    /*save only 32 bytes message*/
+    if(published->application_message_size == 89)parse_save((const char*) published->application_message,published->application_message_size);
+
     //printf("Received publish from '%s' : %s\n", topic_name, (const char*) published->application_message);
 
     free(topic_name);

@@ -25,12 +25,18 @@
  * @returns none
  */
 typedef struct{
-    char jsonStr[4][MAX_JSON_SIZE];    // 1 - activity1, 2 - Rum1, 3 - Chew1, 4 - Rest1
+    char jsonStr[10][MAX_JSON_SIZE];    // 1 - activity1, 2 - Rum1, 3 - Chew1, 4 - Rest1
     uint32_t deviceID;
     uint8_t activity1;
     uint8_t rumination1;
+    uint8_t rumination2;
+    uint8_t rumination3;
     uint8_t chewing1;
+    uint8_t chewing2;
+    uint8_t chewing3;
     uint8_t rest1;
+    uint8_t rest2;
+    uint8_t rest3;
     char time[20];
     uint8_t counter;
 }sensorMess_t;
@@ -123,6 +129,7 @@ void formJsonStrings(sensorMess_t*);
  */
 #define IS_DIGIT(x)  ((x>='0')&&(x<='9'))||((x>='a')&&(x<='f'))||((x>='A')&&(x<='F'))
 
+
  int getDevInfo(char* message,sensorMess_t* sensorMess)
 {
     for(int i = 0; i < 64; i++)if(!(IS_DIGIT(message[i])))return 0;  //message should contain only hex digits
@@ -158,6 +165,38 @@ void formJsonStrings(sensorMess_t*);
     sensorMess->chewing1 = chewing;
     sensorMess->rumination1 = rumination;
     sensorMess->rest1 = rest;
+    switch(message[29]){
+        case '0':
+        rest = 1;rumination = 0; chewing = 0;
+        break;
+        case '1':
+        rest = 0;rumination = 0; chewing = 1;
+        break;
+        case '2':
+        rest = 0;rumination = 1; chewing = 0;
+        break;
+        default:
+        rest = 0; rumination = 0; chewing = 0;
+    }
+    sensorMess->chewing2 = chewing;
+    sensorMess->rumination2 = rumination;
+    sensorMess->rest3 = rest;
+    switch(message[31]){
+        case '0':
+        rest = 1;rumination = 0; chewing = 0;
+        break;
+        case '1':
+        rest = 0;rumination = 0; chewing = 1;
+        break;
+        case '2':
+        rest = 0;rumination = 1; chewing = 0;
+        break;
+        default:
+        rest = 0; rumination = 0; chewing = 0;
+    }
+    sensorMess->chewing3 = chewing;
+    sensorMess->rumination3 = rumination;
+    sensorMess->rest3 = rest;
     /*find activity 1*/
     char activity1Str[3];
     activity1Str[0] = message[20];
@@ -191,6 +230,19 @@ void formJsonStrings(sensorMess_t* sensorMess)
                                             sensorMess->deviceID, sensorMess->chewing1, sensorMess->time);
     snprintf(sensorMess->jsonStr[3],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rest1\",\"value\":%d,\"datatime\":\"%s\"}]",
                                             sensorMess->deviceID, sensorMess->rest1, sensorMess->time);
-    sensorMess->counter = 4; // 4 messages to send;
+    snprintf(sensorMess->jsonStr[4],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rum2\",\"value\":%d,\"datatime\":\"%s\"}]",
+                                            sensorMess->deviceID, sensorMess->rumination2, sensorMess->time);
+    snprintf(sensorMess->jsonStr[5],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Chew2\",\"value\":%d,\"datatime\":\"%s\"}]",
+                                            sensorMess->deviceID, sensorMess->chewing2, sensorMess->time);
+    snprintf(sensorMess->jsonStr[6],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rest2\",\"value\":%d,\"datatime\":\"%s\"}]",
+                                            sensorMess->deviceID, sensorMess->rest2, sensorMess->time);
+    snprintf(sensorMess->jsonStr[7],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rum3\",\"value\":%d,\"datatime\":\"%s\"}]",
+                                            sensorMess->deviceID, sensorMess->rumination3, sensorMess->time);
+    snprintf(sensorMess->jsonStr[8],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Chew3\",\"value\":%d,\"datatime\":\"%s\"}]",
+                                            sensorMess->deviceID, sensorMess->chewing3, sensorMess->time);
+    snprintf(sensorMess->jsonStr[9],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rest3\",\"value\":%d,\"datatime\":\"%s\"}]",
+                                            sensorMess->deviceID, sensorMess->rest3, sensorMess->time);
+
+    sensorMess->counter = 10; // 10 messages to send;
     //messToSend = sensorMess->jsonStr[3];
 }
