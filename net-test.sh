@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-delay=10;
+delay=600;
 noConnectionMessage="No connection, trying again in $delay seconds...";
 ConnectionMessage="We have Internet, trying again in $delay seconds...";
 
