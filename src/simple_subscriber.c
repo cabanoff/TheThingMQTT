@@ -15,13 +15,16 @@
 #define TOPIC_IN "mqtt-kontron/lora-gatway"
 #define ADDR_IN  "localhost"
 #define ADDR_OUT2 "mqtt.thethings.io"
-//#define TOPIC_OUT "v2/things/GfPq9BoJgm73pGrynXafogS_6kzVBo2wWnmzGCKr4J0"
-//#define TOPIC_OUT "v2/things/1ZtGJvaiCCoVbvlliX16R7tDwh1FxYnQfQgcySsam34"
-#define TOPIC_OUT2 "v2/things/LCJzGT3QL6jucKuFcuTyBbvQzYIMunWvHUK1ZKDdfuQ"
-//
+//#define ADDR_OUT2 "localhost"
+#define TOPIC_OUT2 "v2/things/GfPq9BoJgm73pGrynXafogS_6kzVBo2wWnmzGCKr4J0"
+//#define TOPIC_OUT2 "v2/things/1ZtGJvaiCCoVbvlliX16R7tDwh1FxYnQfQgcySsam34"
+//#define TOPIC_OUT2 "v2/things/LCJzGT3QL6jucKuFcuTyBbvQzYIMunWvHUK1ZKDdfuQ"
+//#define TOPIC_OUT2 "smartherd/test"
+
+//#define ADDR_OUT "localhost"
 #define ADDR_OUT "95.46.114.123"
 #define TOPIC_OUT "smartherd/gateway1"
-#define VERSION "2.003"
+#define VERSION "3.010"
 
 
 
@@ -187,16 +190,19 @@ int main(int argc, const char *argv[])
                     if(mqtt_sync(&clientOut) == MQTT_OK) sent_ok = 1;
                 }
                 if(makePublisher2() != -1){
-                     printf("published to test server\n");
+
                      mqtt_publish(&clientOut2, topicOut2, messageToPublish, strlen(messageToPublish), MQTT_PUBLISH_QOS_0);
                      if (clientOut.error == MQTT_OK) {
-                        if(mqtt_sync(&clientOut2) == MQTT_OK) close(sockfdOut2);
+                        if(mqtt_sync(&clientOut2) == MQTT_OK) {
+                            printf("published to test server\n");
+                            close(sockfdOut2);
+                        }
                      }
                 }
 
             }
             if(sent_ok != 0){
-                parse_prepare_mess();
+                //parse_prepare_mess();
                 if (sockfdOut != -1) close(sockfdOut);  //close publisher
             }
 
@@ -231,7 +237,7 @@ int makePublisher(void){
         return -1;
     }
     mqtt_init(&clientOut, sockfdOut, sendbufOut, sizeof(sendbufOut), recvbufOut, sizeof(recvbufOut), publish_callback);
-    mqtt_connect(&clientOut, "publishing_client", NULL, NULL, 0, NULL, NULL, 0, 400);
+    mqtt_connect(&clientOut, "publishing_client1", NULL, NULL, 0, NULL, NULL, 0, 400);
 
     /* check that we don't have any errors */
     if (clientOut.error != MQTT_OK) {

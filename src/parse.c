@@ -12,8 +12,8 @@
 //#include <parse.h>
 
 #define DEBUG_PUBLISH "[{\"key\":\"MartaRum\",\"value\":1}]"
-#define MAX_JSON_SIZE 100
-#define MAX_MESSAGES 200
+#define MAX_JSON_SIZE 1000
+#define MAX_MESSAGES 50
 #define CURRENT sensorMess[messCounter]
 
 /**
@@ -25,7 +25,7 @@
  * @returns none
  */
 typedef struct{
-    char jsonStr[10][MAX_JSON_SIZE];    // 1 - activity1, 2 - Rum1, 3 - Chew1, 4 - Rest1
+    char jsonStr[MAX_JSON_SIZE];    // 1 - activity1, 2 - Rum1, 3 - Chew1, 4 - Rest1
     uint32_t deviceID;
     uint8_t activity1;
     uint8_t rumination1;
@@ -38,7 +38,7 @@ typedef struct{
     uint8_t rest2;
     uint8_t rest3;
     char time[20];
-    uint8_t counter;
+    //uint8_t counter;
 }sensorMess_t;
 
 size_t messageSize;
@@ -81,40 +81,12 @@ void formJsonStrings(sensorMess_t*);
   char* parse_get_mess(void)
   {
     if(messCounter){
-        return(sensorMess[messCounter - 1].jsonStr[sensorMess[messCounter - 1].counter-1]);
+        messCounter--;
+        return(sensorMess[messCounter].jsonStr);
+        //return(sensorMess[messCounter].time);
     }else return NULL;
   }
 
-/**
- * @brief decriments counters, prepares next message to be sent
- *
- * @param[in] none
- *
- * @returns none
- */
- void parse_prepare_mess(void)
- {
-    if(messCounter){
-        if(sensorMess[messCounter - 1].counter > 1){
-            sensorMess[messCounter - 1].counter--;
-            //messToSend =  sensorMess[messCounter - 1].jsonStr[sensorMess[messCounter - 1].counter];
-            return;
-        }else{
-            messCounter--;
-            if(messCounter){
-                if(sensorMess[messCounter - 1].counter > 1){
-                    sensorMess[messCounter - 1].counter--;
-                    //messToSend = sensorMess[messCounter - 1].jsonStr[sensorMess[messCounter - 1].counter];
-                    return;
-                }
-            }
-        }
-
-
-    }
-
-   // messToSend = NULL;
- }
 
  /* --- PRIVATE FUNCTIONS DEFINITION ----------------------------------------- */
 
@@ -122,6 +94,7 @@ void formJsonStrings(sensorMess_t*);
  * @brief returns device ID in string
  *  first 4 bytes of message is device ID
  *  4bytes = 8 digits
+ *  01000000 970F0000 00 01 9F000000 00 00 00000001000000000000000000000000
  * @param[in] message received from sensor,
  * @param[in] sensorMess struct for store sensor information,
  *
@@ -213,6 +186,21 @@ void formJsonStrings(sensorMess_t*);
  * json string example: [{"key":"MartaRum","value":0,"datetime":"20190915193200"}]
  *
  *
+ *   {
+ *     "values": [
+ *       {
+ *         "key": "temp1",
+ *         "value": 41.1,
+ *         "datetime": "20190915193200"
+ *       },
+ *       {
+ *         "key": "temp2",
+ *         "value": 50,
+ *         "datetime": "20190915193200"
+ *       }
+ *     ]
+ *   }
+ *
  *
  * @param[in] sensorMess struct for store sensor information,
  *
@@ -222,27 +210,48 @@ void formJsonStrings(sensorMess_t*);
 
 void formJsonStrings(sensorMess_t* sensorMess)
 {
-    snprintf(sensorMess->jsonStr[0],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Act1\",\"value\":%d,\"datatime\":\"%s\"}]",
-                                            sensorMess->deviceID, sensorMess->activity1, sensorMess->time);
-    snprintf(sensorMess->jsonStr[1],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rum1\",\"value\":%d,\"datatime\":\"%s\"}]",
-                                            sensorMess->deviceID, sensorMess->rumination1, sensorMess->time);
-    snprintf(sensorMess->jsonStr[2],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Chew1\",\"value\":%d,\"datatime\":\"%s\"}]",
-                                            sensorMess->deviceID, sensorMess->chewing1, sensorMess->time);
-    snprintf(sensorMess->jsonStr[3],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rest1\",\"value\":%d,\"datatime\":\"%s\"}]",
-                                            sensorMess->deviceID, sensorMess->rest1, sensorMess->time);
-    snprintf(sensorMess->jsonStr[4],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rum2\",\"value\":%d,\"datatime\":\"%s\"}]",
-                                            sensorMess->deviceID, sensorMess->rumination2, sensorMess->time);
-    snprintf(sensorMess->jsonStr[5],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Chew2\",\"value\":%d,\"datatime\":\"%s\"}]",
-                                            sensorMess->deviceID, sensorMess->chewing2, sensorMess->time);
-    snprintf(sensorMess->jsonStr[6],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rest2\",\"value\":%d,\"datatime\":\"%s\"}]",
-                                            sensorMess->deviceID, sensorMess->rest2, sensorMess->time);
-    snprintf(sensorMess->jsonStr[7],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rum3\",\"value\":%d,\"datatime\":\"%s\"}]",
-                                            sensorMess->deviceID, sensorMess->rumination3, sensorMess->time);
-    snprintf(sensorMess->jsonStr[8],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Chew3\",\"value\":%d,\"datatime\":\"%s\"}]",
-                                            sensorMess->deviceID, sensorMess->chewing3, sensorMess->time);
-    snprintf(sensorMess->jsonStr[9],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rest3\",\"value\":%d,\"datatime\":\"%s\"}]",
-                                            sensorMess->deviceID, sensorMess->rest3, sensorMess->time);
+   // snprintf(sensorMess->jsonStr[0],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Act1\",\"value\":%d,\"datatime\":\"%s\"}]",
+    //                                        sensorMess->deviceID, sensorMess->activity1, sensorMess->time);
+//    snprintf(sensorMess->jsonStr[1],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rum1\",\"value\":%d,\"datatime\":\"%s\"}]",
+//                                            sensorMess->deviceID, sensorMess->rumination1, sensorMess->time);
+//    snprintf(sensorMess->jsonStr[2],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Chew1\",\"value\":%d,\"datatime\":\"%s\"}]",
+//                                            sensorMess->deviceID, sensorMess->chewing1, sensorMess->time);
+//    snprintf(sensorMess->jsonStr[3],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rest1\",\"value\":%d,\"datatime\":\"%s\"}]",
+//                                            sensorMess->deviceID, sensorMess->rest1, sensorMess->time);
+//    snprintf(sensorMess->jsonStr[4],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rum2\",\"value\":%d,\"datatime\":\"%s\"}]",
+//                                            sensorMess->deviceID, sensorMess->rumination2, sensorMess->time);
+//    snprintf(sensorMess->jsonStr[5],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Chew2\",\"value\":%d,\"datatime\":\"%s\"}]",
+//                                            sensorMess->deviceID, sensorMess->chewing2, sensorMess->time);
+//    snprintf(sensorMess->jsonStr[6],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rest2\",\"value\":%d,\"datatime\":\"%s\"}]",
+//                                            sensorMess->deviceID, sensorMess->rest2, sensorMess->time);
+//    snprintf(sensorMess->jsonStr[7],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rum3\",\"value\":%d,\"datatime\":\"%s\"}]",
+//                                            sensorMess->deviceID, sensorMess->rumination3, sensorMess->time);
+//    snprintf(sensorMess->jsonStr[8],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Chew3\",\"value\":%d,\"datatime\":\"%s\"}]",
+//                                            sensorMess->deviceID, sensorMess->chewing3, sensorMess->time);
+//    snprintf(sensorMess->jsonStr[9],MAX_JSON_SIZE,"[{\"key\":\"Dev%d_Rest3\",\"value\":%d,\"datatime\":\"%s\"}]",
+//                                            sensorMess->deviceID, sensorMess->rest3, sensorMess->time);
 
-    sensorMess->counter = 10; // 10 messages to send;
+ //   sensorMess->counter = 10; // 10 messages to send;
     //messToSend = sensorMess->jsonStr[3];
+    snprintf(sensorMess->jsonStr,MAX_JSON_SIZE,\
+"{\"values\":[{\"key\":\"Dev%d_Act1\",\"value\":%d,\"datatime\":\"%s\"},\
+{\"key\":\"Dev%d_Rum1\",\"value\":%d,\"datatime\":\"%s\"},\
+{\"key\":\"Dev%d_Chew1\",\"value\":%d,\"datatime\":\"%s\"},\
+{\"key\":\"Dev%d_Rest1\",\"value\":%d,\"datatime\":\"%s\"},\
+{\"key\":\"Dev%d_Rum2\",\"value\":%d,\"datatime\":\"%s\"},\
+{\"key\":\"Dev%d_Chew2\",\"value\":%d,\"datatime\":\"%s\"},\
+{\"key\":\"Dev%d_Rest2\",\"value\":%d,\"datatime\":\"%s\"},\
+{\"key\":\"Dev%d_Rum3\",\"value\":%d,\"datatime\":\"%s\"},\
+{\"key\":\"Dev%d_Chew3\",\"value\":%d,\"datatime\":\"%s\"},\
+{\"key\":\"Dev%d_Rest3\",\"value\":%d,\"datatime\":\"%s\"}]}",\
+sensorMess->deviceID, sensorMess->activity1, sensorMess->time,\
+sensorMess->deviceID, sensorMess->rumination1, sensorMess->time,\
+sensorMess->deviceID, sensorMess->chewing1, sensorMess->time,\
+sensorMess->deviceID, sensorMess->rest1, sensorMess->time,\
+sensorMess->deviceID, sensorMess->rumination2, sensorMess->time,\
+sensorMess->deviceID, sensorMess->chewing2, sensorMess->time,\
+sensorMess->deviceID, sensorMess->rest2, sensorMess->time,\
+sensorMess->deviceID, sensorMess->rumination3, sensorMess->time,\
+sensorMess->deviceID, sensorMess->chewing3, sensorMess->time,\
+sensorMess->deviceID, sensorMess->rest3, sensorMess->time);
 }
